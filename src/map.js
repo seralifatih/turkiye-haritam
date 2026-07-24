@@ -145,7 +145,14 @@ export function createMap({ topology, mount, width = 1000, onChange }) {
   }
 
   function emit() {
-    if (onChange) onChange({ states, count: visitedCount(), code: encode(states) });
+    if (onChange) {
+      const counts = { 1: 0, 2: 0, 3: 0 };
+      for (let plate = 1; plate <= PROVINCE_COUNT; plate++) {
+        const state = states[plate];
+        if (state >= 1 && state <= 3) counts[state]++;
+      }
+      onChange({ states, count: visitedCount(), counts, code: encode(states) });
+    }
   }
 
   // Load precedence: ?v= in the URL wins over localStorage.

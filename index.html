@@ -37,15 +37,16 @@
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
+      min-height: 100%;
       background: var(--bg);
       color: var(--ink);
       font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
       -webkit-text-size-adjust: 100%;
     }
     .wrap {
-      max-width: 940px;
+      width: min(1200px, calc(100vw - 24px));
       margin: 0 auto;
-      padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+      padding: 12px 0 calc(24px + env(safe-area-inset-bottom));
     }
     header { text-align: center; margin-bottom: 12px; }
     h1 { font-size: 1.15rem; margin: 0 0 4px; }
@@ -72,6 +73,34 @@
       user-select: none;
       -webkit-touch-callout: none;
     }
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 10px;
+      margin: 14px 0 4px;
+    }
+    .stat {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 12px 10px;
+      text-align: center;
+    }
+    .stat-value {
+      display: block;
+      font-size: 1.3rem;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 5px;
+    }
+    .stat-label {
+      display: block;
+      font-size: 0.82rem;
+      color: var(--muted);
+    }
+    .stat.gectim .stat-value { color: var(--gectim); }
+    .stat.gezdim .stat-value { color: var(--gezdim); }
+    .stat.yasadim .stat-value { color: var(--yasadim); }
     .province {
       cursor: pointer;
       transition: fill 120ms ease;
@@ -136,6 +165,15 @@
       transition: opacity 180ms ease;
     }
     .toast.show { opacity: 1; }
+    @media (max-width: 720px) {
+      .wrap {
+        width: min(100vw, calc(100vw - 16px));
+        padding-top: 8px;
+      }
+      .stats {
+        grid-template-columns: 1fr;
+      }
+    }
   </style>
 </head>
 <body>
@@ -149,6 +187,21 @@
       <div id="map"></div>
     </div>
     <p class="hint">Dokun: sonraki seviye · Uzun bas veya sağ tık: geri</p>
+
+    <div class="stats" aria-label="Kategori istatistikleri">
+      <div class="stat gectim">
+        <span class="stat-value" id="count-gectim">0</span>
+        <span class="stat-label">Geçtim</span>
+      </div>
+      <div class="stat gezdim">
+        <span class="stat-value" id="count-gezdim">0</span>
+        <span class="stat-label">Gezdim</span>
+      </div>
+      <div class="stat yasadim">
+        <span class="stat-value" id="count-yasadim">0</span>
+        <span class="stat-label">Yaşadım</span>
+      </div>
+    </div>
 
     <div class="legend" id="legend"></div>
 
@@ -178,6 +231,18 @@
       txt.textContent = lvl.label;
       item.append(sw, txt);
       legend.appendChild(item);
+    }
+
+    const countEls = {
+      gectim: $("count-gectim"),
+      gezdim: $("count-gezdim"),
+      yasadim: $("count-yasadim"),
+    };
+
+    function renderStats(counts) {
+      countEls.gectim.textContent = String(counts[1] || 0);
+      countEls.gezdim.textContent = String(counts[2] || 0);
+      countEls.yasadim.textContent = String(counts[3] || 0);
     }
 
     let toastTimer = null;
@@ -214,9 +279,10 @@
         topology,
         mount: $("map"),
         width: 1000,
-        onChange: ({ count }) => {
+        onChange: ({ count, counts }) => {
           $("count").textContent = count;
           $("share-hint-count").textContent = count;
+          renderStats(counts);
         },
       });
 

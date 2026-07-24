@@ -6,18 +6,21 @@
   <title>Türkiye Haritam — Gezdiğim İller</title>
   <meta name="description" content="Türkiye'nin 81 ilini boya, gezdiğin yerleri işaretle, haritanı paylaş.">
 
-  <!-- Basic Open Graph / Twitter for link previews. No preview image: the map
-       is shared as a downloaded PNG, not a server-rendered og:image. -->
+  <!-- Open Graph / Twitter. These are the DEFAULTS (no ?v=). The / Pages
+       Function (src/worker.js) rewrites og/twitter title, description and image
+       per ?v=. Image URLs MUST be absolute — Twitter ignores relative og:image
+       and silently falls back to a small card. -->
   <meta property="og:type" content="website">
+  <meta property="og:url" content="https://turkiye-haritam.pages.dev/">
   <meta property="og:title" content="Türkiye Haritam">
   <meta property="og:description" content="Türkiye'nin 81 ilini boya, gezdiğin yerleri işaretle, haritanı paylaş.">
-  <meta property="og:image" content="/og">
+  <meta property="og:image" content="https://turkiye-haritam.pages.dev/og">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Türkiye Haritam">
   <meta name="twitter:description" content="Türkiye'nin 81 ilini boya, gezdiğin yerleri işaretle, haritanı paylaş.">
-  <meta name="twitter:image" content="/og">
+  <meta name="twitter:image" content="https://turkiye-haritam.pages.dev/og">
 
   <style>
     :root {

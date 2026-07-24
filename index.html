@@ -265,6 +265,13 @@
       return u.toString();
     }
 
+    async function shareImageFile(url) {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("image fetch failed");
+      const blob = await res.blob();
+      return new File([blob], "turkiye-haritam.png", { type: blob.type || "image/png" });
+    }
+
     async function main() {
       let topology;
       try {
@@ -300,13 +307,25 @@
       $("share").addEventListener("click", async () => {
         const url = shareUrl(map.getCode());
         const shareText = map.getCount() + "/81 il gezdim. Sen de haritanı yap:";
+        const shareImageUrl = new URL("/og", window.location.origin);
+        shareImageUrl.searchParams.set("v", map.getCode());
 
-        // Mobile: native share sheet (URL, not a file). Only fall back to copy
-        // when share is unavailable or fails — NOT when the user cancels it
-        // (a cancel throws AbortError; copying then would be surprising).
+        // Mobile: native share sheet with the OG image when supported. Only
+        // fall back to copy when share is unavailable or fails — NOT when the
+        // user cancels it (a cancel throws AbortError; copying then would be
+        // surprising).
         if (navigator.share) {
           try {
-            await navigator.share({ title: "Türkiye Haritam", text: shareText, url });
+            const shareData = { title: "Türkiye Haritam", text: shareText, url };
+            if (navigator.canShare) {
+              try {
+                const imageFile = await shareImageFile(shareImageUrl.toString());
+                if (navigator.canShare({ files: [imageFile] })) {
+                  shareData.files = [imageFile];
+                }
+              } catch (_) {}
+            }
+            await navigator.share(shareData);
             return;
           } catch (err) {
             if (err && err.name === "AbortError") return; // user dismissed

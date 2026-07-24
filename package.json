@@ -1,0 +1,15 @@
+{
+  "name": "turkeyvisited",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Türkiye'nin 81 ilini boyayıp paylaşılabilir harita üreten tek sayfalık uygulama.",
+  "type": "module",
+  "scripts": {
+    "test": "node src/encoding.test.js"
+  },
+  "dependencies": {
+    "satori": "0.10.13",
+    "yoga-wasm-web": "0.3.3",
+    "@resvg/resvg-wasm": "2.6.2"
+  }
+}

@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Türkiye Haritam — Gezdiğim İller</title>
+  <meta name="description" content="Türkiye'nin 81 ilini boya, gezdiğin yerleri işaretle, haritanı paylaş.">
+
+  <!-- Open Graph / Twitter. These are DEFAULTS for direct visits; the Pages
+       Function on / (functions/index.js) rewrites og:image, og:title,
+       og:description and twitter:* server-side when ?v= is present, so link
+       crawlers (which do not run JS) see the shared map. Order matters only in
+       that these must stay inside <head>. -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Türkiye Haritam">
+  <meta property="og:description" content="Türkiye'nin 81 ilini boya, gezdiğin yerleri işaretle, haritanı paylaş.">
+  <meta property="og:image" content="/og">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Türkiye Haritam">
+  <meta name="twitter:description" content="Türkiye'nin 81 ilini boya, gezdiğin yerleri işaretle, haritanı paylaş.">
+  <meta name="twitter:image" content="/og">
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card: #ffffff;
+      --ink: #0f172a;
+      --muted: #64748b;
+      --line: #e2e8f0;
+      --unvisited: #e5e7eb;
+      --gectim: #fdba74;
+      --gezdim: #38bdf8;
+      --yasadim: #15803f;
+    }
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      -webkit-text-size-adjust: 100%;
+    }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 16px 16px calc(24px + env(safe-area-inset-bottom));
+    }
+    header { text-align: center; margin-bottom: 12px; }
+    h1 { font-size: 1.15rem; margin: 0 0 4px; }
+    .counter {
+      font-size: 1.6rem;
+      font-weight: 700;
+      line-height: 1.1;
+    }
+    .counter small { font-weight: 500; color: var(--muted); font-size: 0.95rem; }
+
+    .map-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 8px;
+      overflow-x: auto;
+    }
+    .map-svg {
+      display: block;
+      width: 100%;
+      height: auto;
+      /* prevent long-press text selection / callout on mobile */
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+    }
+    .province {
+      cursor: pointer;
+      transition: fill 120ms ease;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    .province:focus-visible { outline: 2px solid #0284c7; outline-offset: 1px; }
+
+    .hint {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin: 8px 0 0;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px 18px;
+      margin: 16px 0;
+    }
+    .legend-item { display: flex; align-items: center; gap: 7px; font-size: 0.9rem; }
+    .swatch {
+      width: 16px; height: 16px; border-radius: 4px;
+      border: 1px solid rgba(0,0,0,0.15);
+      flex: none;
+    }
+
+    .actions { display: flex; gap: 10px; justify-content: center; }
+    .share-hint {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.8rem;
+      margin: 10px 0 0;
+    }
+    button {
+      font: inherit;
+      border: 1px solid var(--line);
+      background: var(--card);
+      color: var(--ink);
+      padding: 11px 18px;
+      border-radius: 10px;
+      cursor: pointer;
+      min-height: 44px; /* comfortable tap target */
+    }
+    button.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
+    button:active { transform: translateY(1px); }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: calc(20px + env(safe-area-inset-bottom));
+      transform: translateX(-50%);
+      background: var(--ink);
+      color: #fff;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease;
+    }
+    .toast.show { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Türkiye Haritam</h1>
+      <div class="counter"><span id="count">0</span>/81 <small>il gezildi</small></div>
+    </header>
+
+    <div class="map-card">
+      <div id="map"></div>
+    </div>
+    <p class="hint">Dokun: sonraki seviye · Uzun bas veya sağ tık: geri</p>
+
+    <div class="legend" id="legend"></div>
+
+    <div class="actions">
+      <button class="primary" id="share">Paylaş</button>
+      <button id="reset">Sıfırla</button>
+    </div>
+    <p class="share-hint">Paylaştığında link önizlemesi haritanı gösterir: <span id="share-hint-count">0</span>/81 il işaretli.</p>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script type="module">
+    import { createMap, LEVELS } from "./src/map.js";
+
+    const $ = (id) => document.getElementById(id);
+
+    // Legend: the three visit levels with their colors and Turkish labels.
+    const legend = $("legend");
+    for (const lvl of LEVELS) {
+      const item = document.createElement("div");
+      item.className = "legend-item";
+      const sw = document.createElement("span");
+      sw.className = "swatch";
+      sw.style.background = lvl.color;
+      const txt = document.createElement("span");
+      txt.textContent = lvl.label;
+      item.append(sw, txt);
+      legend.appendChild(item);
+    }
+
+    let toastTimer = null;
+    function toast(msg) {
+      const t = $("toast");
+      t.textContent = msg;
+      t.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
+    }
+
+    // Build the share URL from the current state code. Force the root path
+    // (drop index.html) so the link is /?v=… — the same path the / Pages
+    // Function rewrites OG tags on.
+    function shareUrl(code) {
+      const u = new URL(window.location.href);
+      u.pathname = u.pathname.replace(/index\.html$/, "");
+      u.search = "";
+      u.searchParams.set("v", code);
+      return u.toString();
+    }
+
+    async function main() {
+      let topology;
+      try {
+        const res = await fetch("./data/provinces.topo.json");
+        topology = await res.json();
+      } catch (e) {
+        $("map").textContent = "Harita yüklenemedi.";
+        return;
+      }
+
+      const map = createMap({
+        topology,
+        mount: $("map"),
+        width: 1000,
+        onChange: ({ count }) => {
+          $("count").textContent = count;
+          $("share-hint-count").textContent = count;
+        },
+      });
+
+      $("reset").addEventListener("click", () => {
+        map.reset();
+        // Drop ?v= so a reset doesn't get re-loaded from the URL on refresh.
+        const u = new URL(window.location.href);
+        if (u.searchParams.has("v")) {
+          u.searchParams.delete("v");
+          history.replaceState(null, "", u.pathname + u.search);
+        }
+        toast("Harita sıfırlandı");
+      });
+
+      $("share").addEventListener("click", async () => {
+        const url = shareUrl(map.getCode());
+        const shareText = map.getCount() + "/81 il gezdim. Sen de haritanı yap:";
+
+        // Mobile: native share sheet (URL, not a file). Only fall back to copy
+        // when share is unavailable or fails — NOT when the user cancels it
+        // (a cancel throws AbortError; copying then would be surprising).
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: "Türkiye Haritam", text: shareText, url });
+            return;
+          } catch (err) {
+            if (err && err.name === "AbortError") return; // user dismissed
+            // any other failure: fall through to clipboard copy
+          }
+        }
+
+        try {
+          await navigator.clipboard.writeText(url);
+          toast("Link kopyalandı");
+        } catch (_) {
+          // last resort (no clipboard access): put it in the address bar
+          history.replaceState(null, "", url);
+          toast("Link adres çubuğunda");
+        }
+      });
+    }
+
+    main();
+  </script>
+</body>
+</html>

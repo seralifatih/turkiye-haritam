@@ -1,25 +1,19 @@
-// Assemble the static site + a lightweight Worker entrypoint into ./dist for Cloudflare Pages.
+// Assemble the static site into ./dist for Cloudflare Pages.
 //
-// Three jobs:
-//   1. Copy the servable static files (index.html, src/, data/, assets/) so
-//      node_modules never ends up as a served asset — that broke the first
-//      deploy (wrangler tried to serve node_modules/workerd, 122 MiB).
-//   2. Emit a tiny dist/_worker.js wrapper that points Pages at src/worker.js.
-//   3. Let Cloudflare's compiler handle the wasm imports natively so they stay
-//      as precompiled WebAssembly.Module values instead of raw bytes.
-//
-// _worker.js intercepts /og and / (OG rewrite) and passes everything else to
-// static assets via env.ASSETS, so the static files below still ship.
+// This is a pure static site — no server, no Functions, no dependencies. The
+// only job here is to copy the servable files into dist/ so that node_modules
+// (and anything else at the repo root) never gets served as an asset. That was
+// what broke the very first deploy: wrangler tried to serve
+// node_modules/workerd (122 MiB) and hit the asset size limit.
 
-import { cp, rm, mkdir, writeFile } from "node:fs/promises";
+import { cp, rm, mkdir } from "node:fs/promises";
 
 const OUT = "dist";
 
-// Files/dirs the browser needs at runtime. (The Worker reaches data/ + assets/
-// via env.ASSETS, so they must be present too.)
-const INCLUDE = ["index.html", "src", "data", "assets"];
+// Everything the browser needs at runtime.
+const INCLUDE = ["index.html", "src", "data"];
 
-// Keep tests out of the shipped static tree.
+// Tests don't need to ship.
 const EXCLUDE = new Set(["encoding.test.js"]);
 
 await rm(OUT, { recursive: true, force: true });
@@ -32,11 +26,4 @@ for (const entry of INCLUDE) {
   });
 }
 
-// Keep the root entry tiny so Pages compiles the actual worker source and its
-// wasm imports directly.
-await writeFile(
-  `${OUT}/_worker.js`,
-  `export { default } from "./src/worker.js";\n`,
-);
-
-console.log(`Built ${OUT}/ (static + _worker.js)`);
+console.log(`Built ${OUT}/`);

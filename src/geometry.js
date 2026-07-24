@@ -1,6 +1,5 @@
 // Pure TopoJSON -> SVG geometry, shared by the interactive map (src/map.js) and
-// the OG image Pages Function (functions/og.js). No DOM, no dependencies —
-// works in the browser and in the Cloudflare Workers runtime.
+// the client-side PNG export (buildMapSvg). No DOM, no dependencies.
 
 import { PROVINCES } from "./provinces.js";
 
@@ -166,8 +165,8 @@ export function makeProjection(bounds, width, padRatio = 0.02) {
  * Render the whole map as a standalone SVG string. `fillFor(plate)` returns the
  * fill color for a province; `opts` tweaks stroke and dimensions.
  *
- * Used by the OG function (embedded as an <img> data URI in satori) and usable
- * anywhere a static map image is needed.
+ * Used by the client-side PNG export (nested into the share-card SVG) and
+ * usable anywhere a static map image is needed.
  */
 export function buildMapSvg(topology, fillFor, opts = {}) {
   const {

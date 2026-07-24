@@ -7,10 +7,5 @@
   "scripts": {
     "build": "node build.js",
     "test": "node src/encoding.test.js"
-  },
-  "dependencies": {
-    "@resvg/resvg-wasm": "2.6.2",
-    "satori": "0.10.13",
-    "yoga-wasm-web": "0.3.3"
   }
 }

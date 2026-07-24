@@ -1,27 +1,28 @@
-// Assemble the static site into ./dist for Cloudflare Pages.
+// Assemble the static site + the bundled Worker into ./dist for Cloudflare Pages.
 //
-// Pages serves ONLY the build-output directory (dist/), so node_modules and
-// other build-time files never end up as servable assets — that was what broke
-// the first deploy (wrangler tried to serve node_modules/workerd, 122 MiB).
+// Two jobs:
+//   1. Copy the servable static files (index.html, src/, data/, assets/) so
+//      node_modules never ends up as a served asset — that broke the first
+//      deploy (wrangler tried to serve node_modules/workerd, 122 MiB).
+//   2. Pre-bundle src/worker.js into dist/_worker.js with esbuild, inlining the
+//      wasm as bytes. Pages runs this _worker.js directly (advanced mode) rather
+//      than compiling a functions/ dir — its bundler can't handle satori +
+//      yoga-wasm-web + @resvg/resvg-wasm.
 //
-// The Pages Functions in ./functions are compiled separately by Pages and are
-// NOT copied here. They import from ../src and fetch /data + /assets over HTTP
-// at runtime, so those directories must ship in dist/.
+// _worker.js intercepts /og and / (OG rewrite) and passes everything else to
+// static assets via env.ASSETS, so the static files below still ship.
 
 import { cp, rm, mkdir } from "node:fs/promises";
+import { build } from "esbuild";
 
 const OUT = "dist";
 
-// Files/dirs the browser (or the Functions, via origin fetch) need at runtime.
-const INCLUDE = [
-  "index.html",
-  "src",      // ES modules imported by index.html AND by the Functions
-  "data",     // provinces.topo.json (fetched by client and /og)
-  "assets",   // fonts (fetched by /og)
-];
+// Files/dirs the browser needs at runtime. (The Worker reaches data/ + assets/
+// via env.ASSETS, so they must be present too.)
+const INCLUDE = ["index.html", "src", "data", "assets"];
 
-// Keep test files out of the shipped bundle.
-const EXCLUDE = new Set(["encoding.test.js"]);
+// Keep tests and the server-only worker source out of the shipped static tree.
+const EXCLUDE = new Set(["encoding.test.js", "worker.js"]);
 
 await rm(OUT, { recursive: true, force: true });
 await mkdir(OUT, { recursive: true });
@@ -33,4 +34,17 @@ for (const entry of INCLUDE) {
   });
 }
 
-console.log(`Built ${OUT}/ from: ${INCLUDE.join(", ")}`);
+// Bundle the Worker. `.wasm` -> binary (Uint8Array), which initWasm()/initYoga()
+// accept directly. Target the Workers runtime (esm, browser conditions).
+await build({
+  entryPoints: ["src/worker.js"],
+  outfile: `${OUT}/_worker.js`,
+  bundle: true,
+  format: "esm",
+  platform: "browser",
+  target: "es2022",
+  loader: { ".wasm": "binary" },
+  legalComments: "none",
+});
+
+console.log(`Built ${OUT}/ (static + _worker.js)`);

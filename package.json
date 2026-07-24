@@ -9,8 +9,11 @@
     "test": "node src/encoding.test.js"
   },
   "dependencies": {
+    "@resvg/resvg-wasm": "2.6.2",
     "satori": "0.10.13",
-    "yoga-wasm-web": "0.3.3",
-    "@resvg/resvg-wasm": "2.6.2"
+    "yoga-wasm-web": "0.3.3"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.1"
   }
 }

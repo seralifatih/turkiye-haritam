@@ -95,6 +95,24 @@ function h(type, props, ...children) {
   return { type, props: p };
 }
 
+// Inline monochrome brand marks as data-URI SVGs (no external fetch — the
+// Workers runtime / CSP would block that). Simplified single-path glyphs.
+const TWITTER_ICON = "data:image/svg+xml;utf8," + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#64748b">` +
+  `<path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>`
+);
+const GITHUB_ICON = "data:image/svg+xml;utf8," + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="#64748b">` +
+  `<path d="M12 .5C5.37.5 0 5.87 0 12.5c0 5.3 3.438 9.8 8.205 11.385.6.11.82-.26.82-.577 0-.285-.01-1.04-.015-2.04-3.338.725-4.042-1.61-4.042-1.61-.546-1.387-1.333-1.756-1.333-1.756-1.09-.745.083-.73.083-.73 1.205.085 1.84 1.237 1.84 1.237 1.07 1.835 2.807 1.305 3.492.998.108-.776.42-1.305.762-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.468-2.38 1.236-3.22-.124-.303-.535-1.523.117-3.176 0 0 1.008-.322 3.3 1.23a11.5 11.5 0 0 1 3.003-.404c1.02.005 2.047.138 3.006.404 2.29-1.552 3.296-1.23 3.296-1.23.654 1.653.243 2.873.12 3.176.77.84 1.233 1.91 1.233 3.22 0 4.61-2.805 5.625-5.478 5.92.43.372.814 1.102.814 2.222 0 1.606-.014 2.898-.014 3.293 0 .32.216.694.825.576C20.565 22.296 24 17.796 24 12.5 24 5.87 18.627.5 12 .5z"/></svg>`
+);
+
+function handle(icon, text) {
+  return h("div", { style: { display: "flex", alignItems: "center", gap: "10px" } },
+    h("img", { src: icon, width: 30, height: 30 }),
+    h("span", { style: { fontSize: "26px", color: "#64748b" } }, text),
+  );
+}
+
 function buildTree(mapSrc, count) {
   const legendItems = LEVELS.map((lvl) =>
     h("div", { style: { display: "flex", alignItems: "center", gap: "12px" } },
@@ -108,7 +126,7 @@ function buildTree(mapSrc, count) {
     style: {
       width: WIDTH + "px", height: HEIGHT + "px", display: "flex",
       flexDirection: "column", alignItems: "center", justifyContent: "space-between",
-      background: "#f8fafc", padding: "40px 48px", fontFamily: "Inter",
+      background: "#f8fafc", padding: "36px 48px 28px", fontFamily: "Inter",
     },
   },
     h("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: "4px" } },
@@ -118,9 +136,17 @@ function buildTree(mapSrc, count) {
         h("span", {}, "il gezildi")),
     ),
     h("div", { style: { display: "flex", flex: 1, alignItems: "center", justifyContent: "center", width: "100%" } },
-      h("img", { src: mapSrc, width: 1040, height: 655, style: { objectFit: "contain" } }),
+      h("img", { src: mapSrc, width: 1000, height: 630, style: { objectFit: "contain" } }),
     ),
     h("div", { style: { display: "flex", gap: "48px", alignItems: "center" } }, ...legendItems),
+    // Footer: studio mark (left) + social handles (right).
+    h("div", { style: { display: "flex", width: "100%", alignItems: "flex-end", justifyContent: "space-between" } },
+      h("span", { style: { fontSize: "26px", fontWeight: 600, color: "#94a3b8" } }, "nokta studio"),
+      h("div", { style: { display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" } },
+        handle(TWITTER_ICON, "fatihbuilds"),
+        handle(GITHUB_ICON, "seralifatih"),
+      ),
+    ),
   );
 }
 

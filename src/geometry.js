@@ -2,6 +2,8 @@
 // the OG image Pages Function (functions/og.js). No DOM, no dependencies —
 // works in the browser and in the Cloudflare Workers runtime.
 
+import { PROVINCES } from "./provinces.js";
+
 // --- palette (single source of truth) --------------------------------------
 // 0 = gitmedim (unvisited), 1 = geçtim, 2 = gezdim, 3 = yaşadım.
 export const LEVELS = [
@@ -67,6 +69,70 @@ export function geometryToPath(arcs, geom, project) {
   return d;
 }
 
+function projectedRingMetrics(points) {
+  if (!points.length) return null;
+
+  let areaSum = 0;
+  let centroidX = 0;
+  let centroidY = 0;
+  let minX = Infinity;
+  let minY = Infinity;
+  let maxX = -Infinity;
+  let maxY = -Infinity;
+
+  for (let i = 0; i < points.length; i++) {
+    const [x, y] = points[i];
+    if (x < minX) minX = x;
+    if (x > maxX) maxX = x;
+    if (y < minY) minY = y;
+    if (y > maxY) maxY = y;
+
+    const [nextX, nextY] = points[(i + 1) % points.length];
+    const cross = x * nextY - nextX * y;
+    areaSum += cross;
+    centroidX += (x + nextX) * cross;
+    centroidY += (y + nextY) * cross;
+  }
+
+  const area = areaSum / 2;
+  if (areaSum !== 0) {
+    return {
+      x: centroidX / (3 * areaSum),
+      y: centroidY / (3 * areaSum),
+      width: maxX - minX,
+      height: maxY - minY,
+      area,
+    };
+  }
+
+  return {
+    x: (minX + maxX) / 2,
+    y: (minY + maxY) / 2,
+    width: maxX - minX,
+    height: maxY - minY,
+    area,
+  };
+}
+
+export function geometryLabelMetrics(arcs, geom, project) {
+  const polygons = geom.type === "Polygon" ? [geom.arcs] : geom.arcs;
+  let best = null;
+
+  for (const poly of polygons) {
+    if (!poly.length) continue;
+    const outerRing = poly[0];
+    const points = ringToPoints(arcs, outerRing).map(([lon, lat]) => project(lon, lat));
+    const metrics = projectedRingMetrics(points);
+    if (!metrics) continue;
+
+    if (!best || Math.abs(metrics.area) > Math.abs(best.area)) {
+      best = metrics;
+    }
+  }
+
+  return best;
+}
+
 // Compute lon/lat bounds across all decoded arcs for the projection.
 export function computeBounds(arcs) {
   let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -109,6 +175,8 @@ export function buildMapSvg(topology, fillFor, opts = {}) {
     stroke = "#94a3b8",
     strokeWidth = 0.75,
     background = "transparent",
+    labelFill = "#0f172a",
+    labelStroke = "#ffffff",
   } = opts;
 
   const object = topology.objects[Object.keys(topology.objects)[0]];
@@ -117,11 +185,24 @@ export function buildMapSvg(topology, fillFor, opts = {}) {
   const { height, project } = makeProjection(bounds, width);
 
   let paths = "";
+  let labels = "";
   for (const geom of object.geometries) {
     const plate = geom.properties.plate;
+    const name = PROVINCES[plate] || "Il " + plate;
+    const label = geometryLabelMetrics(arcs, geom, project);
     const d = geometryToPath(arcs, geom, project);
     paths += `<path d="${d}" fill="${fillFor(plate)}" stroke="${stroke}" ` +
              `stroke-width="${strokeWidth}" stroke-linejoin="round"/>`;
+
+    if (label) {
+      const fontSize = Math.max(6.5, Math.min(12, label.width / Math.max(7, name.length * 0.8)));
+      labels += `<text x="${label.x.toFixed(1)}" y="${label.y.toFixed(1)}" ` +
+                `text-anchor="middle" dominant-baseline="middle" ` +
+                `font-family="system-ui, -apple-system, Segoe UI, sans-serif" ` +
+                `font-size="${fontSize.toFixed(1)}" font-weight="700" ` +
+                `fill="${labelFill}" stroke="${labelStroke}" stroke-width="3" ` +
+                `paint-order="stroke" pointer-events="none">${name}</text>`;
+    }
   }
 
   const bg = background === "transparent"
@@ -131,7 +212,7 @@ export function buildMapSvg(topology, fillFor, opts = {}) {
   return {
     svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" ` +
          `height="${height.toFixed(0)}" viewBox="0 0 ${width} ${height.toFixed(0)}">` +
-         `${bg}${paths}</svg>`,
+         `${bg}${paths}${labels}</svg>`,
     width,
     height,
   };

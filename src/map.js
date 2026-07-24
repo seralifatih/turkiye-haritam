@@ -8,7 +8,7 @@ import { PROVINCES } from "./provinces.js";
 import { encode, decode, emptyStates, PROVINCE_COUNT } from "./encoding.js";
 import {
   LEVELS, UNVISITED_COLOR, STROKE_COLOR, colorForState,
-  decodeArcs, geometryToPath, computeBounds, makeProjection,
+  decodeArcs, geometryToPath, computeBounds, makeProjection, geometryLabelMetrics,
 } from "./geometry.js";
 
 export { LEVELS };
@@ -36,10 +36,15 @@ export function createMap({ topology, mount, width = 1000, onChange }) {
 
   let states = emptyStates();
   const pathByPlate = new Map();
+  const labelGroup = document.createElementNS(svgNS, "g");
+  labelGroup.setAttribute("aria-hidden", "true");
+  labelGroup.setAttribute("pointer-events", "none");
 
   for (const geom of object.geometries) {
     const plate = geom.properties.plate;
     const name = PROVINCES[plate] || "İl " + plate;
+    const label = geometryLabelMetrics(arcs, geom, project);
+
     const path = document.createElementNS(svgNS, "path");
     path.setAttribute("d", geometryToPath(arcs, geom, project));
     path.setAttribute("stroke", STROKE);
@@ -85,8 +90,27 @@ export function createMap({ topology, mount, width = 1000, onChange }) {
 
     svg.appendChild(path);
     pathByPlate.set(plate, path);
+
+    if (label) {
+      const text = document.createElementNS(svgNS, "text");
+      const fontSize = Math.max(6.5, Math.min(12, label.width / Math.max(7, name.length * 0.8)));
+      text.textContent = name;
+      text.setAttribute("x", label.x.toFixed(1));
+      text.setAttribute("y", label.y.toFixed(1));
+      text.setAttribute("text-anchor", "middle");
+      text.setAttribute("dominant-baseline", "middle");
+      text.setAttribute("font-family", "system-ui, -apple-system, Segoe UI, sans-serif");
+      text.setAttribute("font-size", fontSize.toFixed(1));
+      text.setAttribute("font-weight", "700");
+      text.setAttribute("fill", "#0f172a");
+      text.setAttribute("stroke", "#ffffff");
+      text.setAttribute("stroke-width", "3");
+      text.setAttribute("paint-order", "stroke");
+      labelGroup.appendChild(text);
+    }
   }
 
+  svg.appendChild(labelGroup);
   mount.appendChild(svg);
 
   function cycle(plate, dir) {

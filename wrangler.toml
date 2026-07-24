@@ -1,6 +1,17 @@
 name = "turkiye-haritam"
 compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
 
-# Pure static Cloudflare Pages site. `npm run build` copies the servable files
-# into dist/ (keeping node_modules out); Pages serves that directory.
+# Cloudflare Pages project. build.js copies the static files into dist/ and
+# writes a tiny dist/_worker.js that re-exports src/worker.js, so Pages compiles
+# the Worker (and its wasm imports) itself.
 pages_build_output_dir = "dist"
+
+# Bind every imported .wasm as a precompiled WebAssembly.Module, not raw bytes.
+# This is what lets `import resvgWasm from "@resvg/resvg-wasm/index_bg.wasm"`
+# (and the yoga.wasm import) be handed straight to initWasm()/initYoga() with no
+# runtime WebAssembly.compile — which the Workers runtime forbids.
+[[rules]]
+type = "CompiledWasm"
+globs = ["**/*.wasm"]
+fallthrough = true

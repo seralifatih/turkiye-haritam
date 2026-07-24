@@ -176,6 +176,10 @@ export function buildMapSvg(topology, fillFor, opts = {}) {
     background = "transparent",
     labelFill = "#0f172a",
     labelStroke = "#ffffff",
+    // Province name labels. Off for the OG image: the map is embedded there as
+    // an <img> data URI and satori base64-encodes it with btoa(), which throws
+    // on the Turkish letters in the province names (ü, ş, İ, ğ...).
+    showLabels = true,
   } = opts;
 
   const object = topology.objects[Object.keys(topology.objects)[0]];
@@ -193,7 +197,7 @@ export function buildMapSvg(topology, fillFor, opts = {}) {
     paths += `<path d="${d}" fill="${fillFor(plate)}" stroke="${stroke}" ` +
              `stroke-width="${strokeWidth}" stroke-linejoin="round"/>`;
 
-    if (label) {
+    if (showLabels && label) {
       const fontSize = Math.max(6.5, Math.min(12, label.width / Math.max(7, name.length * 0.8)));
       labels += `<text x="${label.x.toFixed(1)}" y="${label.y.toFixed(1)}" ` +
                 `text-anchor="middle" dominant-baseline="middle" ` +

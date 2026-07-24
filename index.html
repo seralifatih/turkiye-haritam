@@ -203,10 +203,11 @@
     <div class="legend" id="legend"></div>
 
     <div class="actions">
-      <button class="primary" id="share">PNG indir</button>
+      <button class="primary" id="share">Paylaş</button>
+      <button id="download">PNG indir</button>
       <button id="reset">Sıfırla</button>
     </div>
-    <p class="share-hint">İndirince PNG dosyası oluşur: <span id="share-hint-count">0</span>/81 il işaretli.</p>
+    <p class="share-hint">Paylaştığında link önizlemesi haritanı gösterir: <span id="share-hint-count">0</span>/81 il işaretli.</p>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -375,7 +376,42 @@
         toast("Harita sıfırlandı");
       });
 
+      // Build the share URL: /?v=<code> (root path, so the / Pages Function
+      // rewrites the OG tags on it and link previews render the map).
+      function shareUrl(code) {
+        const u = new URL(window.location.href);
+        u.pathname = u.pathname.replace(/index\.html$/, "");
+        u.search = "";
+        u.searchParams.set("v", code);
+        return u.toString();
+      }
+
+      // Paylaş: native share sheet on mobile (URL, not a file), clipboard copy
+      // otherwise.
       $("share").addEventListener("click", async () => {
+        const url = shareUrl(map.getCode());
+        const text = map.getCount() + "/81 il gezdim. Sen de haritanı yap:";
+
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: "Türkiye Haritam", text, url });
+            return;
+          } catch (err) {
+            if (err && err.name === "AbortError") return; // user dismissed
+            // otherwise fall through to clipboard
+          }
+        }
+        try {
+          await navigator.clipboard.writeText(url);
+          toast("Link kopyalandı");
+        } catch (_) {
+          history.replaceState(null, "", url);
+          toast("Link adres çubuğunda");
+        }
+      });
+
+      // PNG indir: render + download the map image client-side.
+      $("download").addEventListener("click", async () => {
         try {
           await downloadMapPng(topology, map.getCode());
           toast("PNG indirildi");

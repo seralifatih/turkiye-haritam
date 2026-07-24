@@ -7,11 +7,9 @@ compatibility_flags = ["nodejs_compat"]
 # the Worker (and its wasm imports) itself.
 pages_build_output_dir = "dist"
 
-# Bind every imported .wasm as a precompiled WebAssembly.Module, not raw bytes.
-# This is what lets `import resvgWasm from "@resvg/resvg-wasm/index_bg.wasm"`
-# (and the yoga.wasm import) be handed straight to initWasm()/initYoga() with no
-# runtime WebAssembly.compile — which the Workers runtime forbids.
-[[rules]]
-type = "CompiledWasm"
-globs = ["**/*.wasm"]
-fallthrough = true
+# NOTE: Pages does NOT support [[rules]] in wrangler.toml (it errors with
+# "Configuration file for Pages projects does not support rules"). It isn't
+# needed: when Pages compiles an advanced-mode _worker.js, it already binds
+# `.wasm` imports as precompiled WebAssembly.Module values by default, so
+# `import resvgWasm from "@resvg/resvg-wasm/index_bg.wasm"` and the yoga import
+# go straight to initWasm()/initYoga() with no runtime WebAssembly.compile.

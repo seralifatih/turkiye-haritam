@@ -11,9 +11,9 @@
 //   GET / (or /index) -> index.html with OG/Twitter meta rewritten per ?v=
 //   everything else    -> static assets (env.ASSETS)
 //
-// Both WASM modules are initialized explicitly (the Workers runtime forbids
-// eager, import-time WebAssembly instantiation). Turkish text uses an embedded
-// Inter font. A missing/malformed ?v= yields an EMPTY map, never an error.
+// Both WASM modules are initialized explicitly from Cloudflare's precompiled
+// `.wasm` imports. Turkish text uses an embedded Inter font. A missing/malformed
+// ?v= yields an EMPTY map, never an error.
 
 import satori, { init as initSatori } from "satori";
 import initYoga from "yoga-wasm-web";
@@ -21,12 +21,10 @@ import yogaWasm from "yoga-wasm-web/dist/yoga.wasm";
 import { initWasm, Resvg } from "@resvg/resvg-wasm";
 import resvgWasm from "@resvg/resvg-wasm/index_bg.wasm";
 
-// The Workers runtime forbids compiling wasm at request time (only instantiating
-// a pre-compiled WebAssembly.Module is allowed). esbuild inlines the .wasm as
-// bytes, so compile them into Modules ONCE at top level, where it is permitted,
-// and hand the Modules — not the bytes — to the init functions.
-const resvgModule = new WebAssembly.Module(resvgWasm);
-const yogaModule = new WebAssembly.Module(yogaWasm);
+// Cloudflare's compiler provides these imports as precompiled
+// `WebAssembly.Module` values, which the init functions can consume directly.
+const resvgModule = resvgWasm;
+const yogaModule = yogaWasm;
 
 import { decode, emptyStates, PROVINCE_COUNT } from "./encoding.js";
 import { LEVELS, colorForState, buildMapSvg } from "./geometry.js";

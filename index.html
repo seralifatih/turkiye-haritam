@@ -206,10 +206,10 @@
     <div class="legend" id="legend"></div>
 
     <div class="actions">
-      <button class="primary" id="share">Paylaş</button>
+      <button class="primary" id="share">PNG indir</button>
       <button id="reset">Sıfırla</button>
     </div>
-    <p class="share-hint">Paylaştığında link önizlemesi haritanı gösterir: <span id="share-hint-count">0</span>/81 il işaretli.</p>
+    <p class="share-hint">İndirince PNG dosyası oluşur: <span id="share-hint-count">0</span>/81 il işaretli.</p>
   </div>
 
   <div class="toast" id="toast"></div>
@@ -254,24 +254,25 @@
       toastTimer = setTimeout(() => t.classList.remove("show"), 1800);
     }
 
-    // Build the share URL from the current state code. Force the root path
-    // (drop index.html) so the link is /?v=… — the same path the / Pages
-    // Function rewrites OG tags on.
-    function shareUrl(code) {
-      const u = new URL(window.location.href);
-      u.pathname = u.pathname.replace(/index\.html$/, "");
-      u.search = "";
-      u.searchParams.set("v", code);
-      return u.toString();
-    }
+    // Download the current map as a PNG file.
+    async function downloadMapPng(code) {
+      const imageUrl = new URL("/og", window.location.origin);
+      imageUrl.searchParams.set("v", code);
 
-    async function shareImageFile(url) {
-      const res = await fetch(url);
+      const res = await fetch(imageUrl);
       if (!res.ok) throw new Error("image fetch failed");
-      const blob = await res.blob();
-      return new File([blob], "turkiye-haritam.png", { type: blob.type || "image/png" });
-    }
 
+      const blob = await res.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = "turkiye-haritam.png";
+      link.rel = "noopener";
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+    }
     async function main() {
       let topology;
       try {
@@ -305,41 +306,12 @@
       });
 
       $("share").addEventListener("click", async () => {
-        const url = shareUrl(map.getCode());
-        const shareText = map.getCount() + "/81 il gezdim. Sen de haritanı yap:";
-        const shareImageUrl = new URL("/og", window.location.origin);
-        shareImageUrl.searchParams.set("v", map.getCode());
-
-        // Mobile: native share sheet with the OG image when supported. Only
-        // fall back to copy when share is unavailable or fails — NOT when the
-        // user cancels it (a cancel throws AbortError; copying then would be
-        // surprising).
-        if (navigator.share) {
-          try {
-            const shareData = { title: "Türkiye Haritam", text: shareText, url };
-            if (navigator.canShare) {
-              try {
-                const imageFile = await shareImageFile(shareImageUrl.toString());
-                if (navigator.canShare({ files: [imageFile] })) {
-                  shareData.files = [imageFile];
-                }
-              } catch (_) {}
-            }
-            await navigator.share(shareData);
-            return;
-          } catch (err) {
-            if (err && err.name === "AbortError") return; // user dismissed
-            // any other failure: fall through to clipboard copy
-          }
-        }
-
         try {
-          await navigator.clipboard.writeText(url);
-          toast("Link kopyalandı");
-        } catch (_) {
-          // last resort (no clipboard access): put it in the address bar
-          history.replaceState(null, "", url);
-          toast("Link adres çubuğunda");
+          await downloadMapPng(map.getCode());
+          toast("PNG indirildi");
+        } catch (err) {
+          console.error(err);
+          toast("PNG indirilemedi");
         }
       });
     }
@@ -348,3 +320,7 @@
   </script>
 </body>
 </html>
+
+
+
+

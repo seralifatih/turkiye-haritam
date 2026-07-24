@@ -1,0 +1,7 @@
+name = "turkiye-haritam"
+compatibility_date = "2024-09-01"
+compatibility_flags = ["nodejs_compat"]
+
+# This is a Cloudflare Pages project. Pages serves only this directory as static
+# assets; the ./functions directory is compiled separately as Pages Functions.
+pages_build_output_dir = "dist"

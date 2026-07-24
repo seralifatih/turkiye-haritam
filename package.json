@@ -5,6 +5,7 @@
   "description": "Türkiye'nin 81 ilini boyayıp paylaşılabilir harita üreten tek sayfalık uygulama.",
   "type": "module",
   "scripts": {
+    "build": "node build.js",
     "test": "node src/encoding.test.js"
   },
   "dependencies": {
